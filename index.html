@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <!-- 加入這行確保手機版正確縮放 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>1A2B 極速挑戰</title>
+    <style>
+        :root { --bg: #1a1a2e; --card: #16213e; --accent: #e94560; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+               background: var(--bg); color: #fff; margin: 0; padding: 15px; display: flex; justify-content: center; }
+        
+        .container { width: 100%; max-width: 500px; background: var(--card); padding: 25px; 
+                     border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); box-sizing: border-box; }
+        
+        h2 { font-size: 1.8em; margin-bottom: 10px; color: var(--accent); }
+        .stats { display: flex; justify-content: space-between; margin-bottom: 20px; font-weight: bold; font-size: 1.1em; }
+        
+        /* 針對手機優化的輸入框與按鈕 */
+        input { width: 100%; height: 60px; font-size: 24px; text-align: center; border-radius: 12px; 
+                border: 2px solid #0f3460; background: #0f3460; color: white; margin-bottom: 15px; box-sizing: border-box; }
+        
+        button { width: 100%; height: 55px; font-size: 1.2em; font-weight: bold; cursor: pointer; 
+                 background: var(--accent); color: white; border: none; border-radius: 12px; transition: 0.2s; }
+        button:active { transform: scale(0.98); opacity: 0.9; }
+
+        #history { margin-top: 20px; height: 120px; overflow-y: auto; background: rgba(0,0,0,0.3); 
+                   padding: 10px; border-radius: 10px; font-family: monospace; font-size: 1.1em; }
+        
+        .rank-section { margin-top: 20px; text-align: left; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; }
+        li { padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>1A2B 密碼破解</h2>
+    <div class="stats">
+        <span>⏱ <span id="timer">60</span>s</span>
+        <span>🔑 剩餘 <span id="attempts">10</span> 次</span>
+    </div>
+
+    <!-- 限制手機彈出數字鍵盤 -->
+    <input type="number" id="guessInput" pattern="\d*" placeholder="輸入 4 位不重複數字" oninput="if(value.length>4)value=value.slice(0,4)">
+    <button onclick="makeGuess()">立即破解</button>
+
+    <div id="history"></div>
+
+    <div class="rank-section">
+        <h3 style="margin-top:0">🏆 排行榜 (最佳秒數)</h3>
+        <ul id="rankList" style="list-style: none; padding: 0; margin:0;"></ul>
+    </div>
+</div>
+
+<script>
+    // 遊戲邏輯（同前一版本，已優化變量）
+    let secret = "", timeLeft = 60, attemptsLeft = 10, timerInterval, isGameOver = false;
+
+    function initGame() {
+        let nums = [0,1,2,3,4,5,6,7,8,9];
+        nums.sort(() => Math.random() - 0.5);
+        secret = nums.slice(0, 4).join('');
+        timeLeft = 60; attemptsLeft = 10; isGameOver = false;
+        document.getElementById('history').innerHTML = "";
+        updateRanking();
+        startTimer();
+    }
+
+    function startTimer() {
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            document.getElementById('timer').innerText = timeLeft;
+            if (timeLeft <= 0) endGame(false, "時間到！");
+        }, 1000);
+    }
+
+    function makeGuess() {
+        if (isGameOver) return;
+        let input = document.getElementById('guessInput').value;
+        if (input.length !== 4 || new Set(input).size !== 4) {
+            alert("請輸入 4 位不重複數字"); return;
+        }
+
+        attemptsLeft--;
+        let a = 0, b = 0;
+        for (let i = 0; i < 4; i++) {
+            if (input[i] === secret[i]) a++;
+            else if (secret.includes(input[i])) b++;
+        }
+
+        let p = document.createElement('div');
+        p.innerHTML = `猜 <b>${input}</b> ➔ <span style="color:#f1c40f">${a}A${b}B</span>`;
+        document.getElementById('history').prepend(p);
+
+        if (a === 4) endGame(true);
+        else if (attemptsLeft <= 0) endGame(false, "次數已達上限");
+        
+        document.getElementById('guessInput').value = "";
+        document.getElementById('attempts').innerText = attemptsLeft;
+    }
+
+    function endGame(win, msg) {
+        isGameOver = true;
+        clearInterval(timerInterval);
+        if (win) {
+            alert("破解成功！");
+            saveScore(60 - timeLeft);
+        } else {
+            alert(msg + "！密碼是: " + secret);
+        }
+        initGame();
+    }
+
+    function saveScore(s) {
+        let scores = JSON.parse(localStorage.getItem('rank1A2B') || "[]");
+        scores.push(s);
+        scores.sort((a, b) => a - b);
+        localStorage.setItem('rank1A2B', JSON.stringify(scores.slice(0, 5)));
+        updateRanking();
+    }
+
+    function updateRanking() {
+        let scores = JSON.parse(localStorage.getItem('rank1A2B') || "[]");
+        document.getElementById('rankList').innerHTML = scores.map((s, i) => 
+            `<li><span>No.${i+1}</span> <span>${s}s</span></li>`).join('') || "暫無紀錄";
+    }
+
+    initGame();
+</script>
+</body>
+</html>
