@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+.vscode/
+army_save.json
